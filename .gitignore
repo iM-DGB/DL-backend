@@ -1,0 +1,33 @@
+# Python 기본
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Poetry 가상환경 (in-project 가상환경일 경우)
+.venv/
+
+# Poetry 캐시 및 설정 파일 제외
+.poetry/
+.poetry-cache/
+poetry.lock
+
+# 가상환경 (venv, env)
+venv/
+env/
+
+# PyCharm, VSCode 등 IDE 설정 파일
+.idea/
+.vscode/
+
+# 로그 파일
+*.log
+
+# macOS 시스템 파일
+.DS_Store
+
+# 환경 변수 파일 (개인정보 노출 방지)
+.env
+
+# 기타
+*.sqlite3
+*.db
