@@ -3,19 +3,16 @@ name = "chatbot"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "한민정",email = "zoangrak@gmail.com"}
+    {name = "한민정", email = "zoangrak@gmail.com"}
 ]
-readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10,<4.0"
 dependencies = [
     "fastapi (>=0.115.12,<0.116.0)",
     "uvicorn (>=0.34.2,<0.35.0)",
     "google-generativeai (>=0.8.5,<0.9.0)",
     "python-dotenv (>=1.1.0,<2.0.0)",
-    "sentence-transformers (>=4.1.0,<5.0.0)",
+    "langchain-upstage (>=0.6.0,<0.7.0)"
 ]
-
-
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
