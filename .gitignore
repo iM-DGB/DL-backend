@@ -9,7 +9,6 @@ __pycache__/
 # Poetry 캐시 및 설정 파일 제외
 .poetry/
 .poetry-cache/
-poetry.lock
 
 # 가상환경 (venv, env)
 venv/
