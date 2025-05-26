@@ -43,4 +43,4 @@ jobs:
             --platform managed \
             --region asia-northeast3 \
             --allow-unauthenticated \
-            --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},SOLAR_API_KEY=${{ secrets.SOLAR_API_KEY }}
+            --set-env-vars PG_HOST=${{ secrets.PG_HOST }},PG_PORT=${{ secrets.PG_PORT }},PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_DB=${{ secrets.PG_DB }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},SOLAR_API_KEY=${{ secrets.SOLAR_API_KEY }}
