@@ -14,3 +14,9 @@ class Action(BaseModel):
 class KakaoRequest(BaseModel):
     action: Action
     userRequest: UserRequest
+
+class RelevantChunksRequest(BaseModel):
+    query: str
+    category: str
+    top_k: Optional[int]
+    product_top_k: Optional[int]

@@ -1,8 +1,8 @@
 from fastapi import APIRouter
-from app.models.schema import KakaoRequest
+from app.models.schema import KakaoRequest, RelevantChunksRequest
 from app.llm.gemini import generate_answer
-from app.utils.pg_search import search_similar_chunks, search_exact_product
-from app.utils.prompt import build_prompt
+from app.llm.search import search_exact_product, get_relevant_chunks
+from app.llm.prompt import build_prompt
 
 router = APIRouter()
 
@@ -12,13 +12,22 @@ async def kakao_rag_webhook(data: KakaoRequest):
     product_name = data.action.params.product_name
     user_msg = data.userRequest.utterance
 
-    # 🔀 분기
+    # 🔍 RAG 검색
     if product_name:
         chunks = search_exact_product(category, product_name)
     else:
-        chunks = search_similar_chunks(user_msg, filter={"category": category})
+        result = get_relevant_chunks(
+            query=user_msg,
+            category=category,
+            top_k=5,
+            product_top_k=10
+        )
+        chunks = result["top_chunks"]
 
+    # 🧠 Prompt 조립
     prompt = build_prompt(chunks, user_msg)
+
+     # ✨ Gemini 호출
     answer = generate_answer(prompt)
 
     return {
@@ -30,39 +39,65 @@ async def kakao_rag_webhook(data: KakaoRequest):
         }
     }
 
-# @router.post("/kakao/rag-webhook")
-# async def kakao_rag_webhook(data: KakaoRequest):
-#     user_msg = data.userRequest.utterance
+# @router.post("/kakao/get-relevant-chunks")
+# async def get_relevant_chunks_api(data: RelevantChunksRequest):
+#     result = get_relevant_chunks(
+#         query=data.query,
+#         category=data.category,
+#         top_k=data.top_k,
+#         product_top_k=data.product_top_k
+#     )
+#     return result
 
-#     # 🔍 RAG 검색
-#     context_chunks = search_similar_chunks(user_msg, top_k=3)
 
-#     # 🧠 Prompt 조립
-#     prompt = build_prompt(context_chunks, user_msg)
 
-#     # ✨ Gemini 호출
-#     gemini_answer = generate_answer(prompt)
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Optional
+from app.llm.search import get_relevant_chunks
 
-#     # 📦 카카오 응답 형식
-#     return {
-#         "version": "2.0",
-#         "template": {
-#             "outputs": [
-#                 {"simpleText": {"text": gemini_answer}}
-#             ]
-#         }
-#     }
+router = APIRouter()
 
-@router.post("/kakao/webhook")
-async def kakao_webhook(data: KakaoRequest):
-    user_msg = data.userRequest.utterance
-    gemini_answer = generate_answer(user_msg)
+# 카카오 챗봇 요청 스키마
+class UserRequest(BaseModel):
+    utterance: str
+
+class ActionParams(BaseModel):
+    category: Optional[str]
+    product_name: Optional[str] = None
+
+class Action(BaseModel):
+    params: ActionParams
+
+class KakaoRequest(BaseModel):
+    action: Action
+    userRequest: UserRequest
+
+@router.post("/kakao/get-relevant-chunks")
+async def get_relevant_chunks_api(data: KakaoRequest):
+    query = data.userRequest.utterance
+    category = data.action.params.category or "기본카테고리"
+
+    result = get_relevant_chunks(
+        query=query,
+        category=category,
+        top_k=5,
+        product_top_k=10
+    )
+
+    recommended = result.get("recommended_product") or "추천 상품이 없습니다."
+    chunks_preview = "\n\n".join(result.get("top_chunks", [])[:3]) or "관련 정보가 없습니다."
+
+    answer = f"추천 상품: {recommended}\n\n{chunks_preview}"
+
     return {
         "version": "2.0",
         "template": {
             "outputs": [
                 {
-                    "simpleText": {"text": gemini_answer}
+                    "simpleText": {
+                        "text": answer
+                    }
                 }
             ]
         }
