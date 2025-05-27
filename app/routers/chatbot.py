@@ -102,3 +102,29 @@ async def get_relevant_chunks_api(data: KakaoRequest):
             ]
         }
     }
+
+class SimpleRequest(BaseModel):
+    category: Optional[str] = None
+    product_name: Optional[str] = None
+    message: Optional[str] = None
+
+@router.post("/test/simple-response")
+async def simple_response(data: SimpleRequest):
+    cat = data.category or "카테고리 없음"
+    pname = data.product_name or "상품명 없음"
+    msg = data.message or "메시지 없음"
+
+    text = f"카테고리: {cat}\n상품명: {pname}\n메시지: {msg}"
+
+    return {
+        "version": "2.0",
+        "template": {
+            "outputs": [
+                {
+                    "simpleText": {
+                        "text": text
+                    }
+                }
+            ]
+        }
+    }
