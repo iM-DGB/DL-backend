@@ -1,9 +1,10 @@
 import os
+import re
 from dotenv import load_dotenv
 from langchain_upstage import UpstageEmbeddings
 from langchain_community.vectorstores.pgvector import PGVector
 
-# ✅ .env 파일 강제 로드
+# ✅ .env 로드
 load_dotenv(dotenv_path=".env", override=True)
 
 # ✅ 환경변수 불러오기
@@ -12,40 +13,71 @@ PG_PASSWORD = os.getenv("PG_PASSWORD")
 PG_HOST = os.getenv("PG_HOST")
 PG_PORT = os.getenv("PG_PORT")
 PG_DB = os.getenv("PG_DB")
+SOLAR_API_KEY = os.getenv("SOLAR_API_KEY")
 
-# ✅ 연결 문자열 (transaction pooler + SSL)
+# ✅ 연결 문자열
 CONNECTION_STRING = (
-    f"postgresql+psycopg://{PG_USER}:{PG_PASSWORD}"
-    f"@{PG_HOST}:{PG_PORT}/{PG_DB}?sslmode=require"
+    f"postgresql+psycopg://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DB}?sslmode=require"
 )
 print(f"📡 연결 확인 → {CONNECTION_STRING}")
 
-# ✅ SOLAR 임베딩 설정
+# ✅ 임베딩 모델 설정
 embedder = UpstageEmbeddings(
     model="solar-embedding-1-large",
-    api_key=os.getenv("SOLAR_API_KEY")
+    api_key=SOLAR_API_KEY
 )
 
-# ✅ 입력 텍스트 및 메타데이터
-texts = [
-    "해외여행자 보험은 질병 및 상해 치료비를 보장합니다.",
-    "휴대품 손해는 항목당 최대 20만원까지 보장됩니다."
-]
+# ✅ 루트 폴더
+BASE_DIR = "app/utils/data"
 
-metadatas = [
-    {
-        "category": "여행자보험",
-        "product_name": "글로벌케어",
-        "type": "실손",
-        "clause": "3조 1항"
-    },
-    {
-        "category": "여행자보험",
-        "product_name": "글로벌케어",
-        "type": "실손",
-        "clause": "3조 2항"
-    }
-]
+texts, metadatas = [], []
+
+# ✅ 모든 하위 폴더 및 파일 순회
+for category in os.listdir(BASE_DIR):
+    category_path = os.path.join(BASE_DIR, category)
+    if not os.path.isdir(category_path):
+        continue
+
+    for filename in os.listdir(category_path):
+        if not filename.endswith(".txt"):
+            continue
+
+        file_path = os.path.join(category_path, filename)
+        product_name = os.path.splitext(filename)[0]
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception as e:
+            print(f"❌ 파일 열기 실패: {file_path} → {e}")
+            continue
+
+        # ✅ 문단 분리
+        paragraphs = re.split(r"\n\s*\n", content.strip())
+
+        # ✅ 부칙 기준 인덱스 찾기
+        split_idx = None
+        for i, para in enumerate(paragraphs):
+            if "부 칙" in para or "부칙" in para:
+                split_idx = i
+                break
+
+        # ✅ 각 문단 처리
+        for idx, para in enumerate(paragraphs):
+            para = para.strip()
+            if not para:
+                continue
+
+            section_type = "상품설명" if split_idx is not None and idx > split_idx else "약관"
+
+            texts.append(para)
+            metadatas.append({
+                "category": category,
+                "product_name": product_name,
+                "type": section_type
+            })
+
+print(f"\n📦 총 문단 수: {len(texts)}")
 
 # ✅ 벡터 저장
 try:
@@ -53,10 +85,12 @@ try:
         texts=texts,
         embedding=embedder,
         metadatas=metadatas,
-        collection_name="insurance_docs",            # 컬렉션 이름 (UUID 자동 생성)
+        collection_name="insurance_docs",
         connection_string=CONNECTION_STRING,
     )
-    print("✅ Supabase(pgvector)에 벡터 저장 완료!")
+    print("\n✅ 모든 텍스트 문단 벡터 저장 완료!")
 
 except Exception as e:
-    print("❌ 오류 발생:", e)
+    print("❌ 벡터 저장 중 오류 발생:", e)
+
+
