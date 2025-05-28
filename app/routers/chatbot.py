@@ -2,7 +2,8 @@ from fastapi import APIRouter, Request, BackgroundTasks, Response, status
 from fastapi.responses import JSONResponse
 from app.models.schema import KakaoRequest
 from app.llm.gemini import generate_answer
-from app.llm.search import get_relevant_chunks
+# from app.llm.search import get_relevant_chunks_fast as get_relevant_chunks
+from app.llm.search import get_relevant_chunks_pgvector as get_relevant_chunks
 from app.llm.prompt import build_prompt
 import httpx
 import logging
@@ -67,7 +68,7 @@ async def get_recommended_products_direct(data: KakaoRequest):
             }
         }
 
-    result = get_relevant_chunks(query=query, category=category, top_k=5, product_top_k=10)
+    result = get_relevant_chunks(query=query, category=category, top_k=5)
     chunks = result["top_chunks"]
 
     prompt = build_prompt(chunks, query)
@@ -111,7 +112,7 @@ async def kakao_callback(request: Request):
 async def process_and_callback(user_msg: str, category: str, callback_url: str):
     try:
         logger.info("🔍 유사 상품 검색 중...")
-        result = get_relevant_chunks(user_msg, category, top_k=5, product_top_k=10)
+        result = get_relevant_chunks(user_msg, category, top_k=5)
         chunks = result["top_chunks"]
         logger.info(f"🔎 검색된 청크 개수: {len(chunks)}")
 
