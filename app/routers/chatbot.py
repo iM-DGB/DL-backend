@@ -25,16 +25,18 @@ async def get_recommended_products_with_callback(
     category = data.action.params.category
 
     if not query.strip():
-        response.status_code = 400
-        logger.warning("❌ 사용자 질문(utterance)이 비어있습니다.")
-        return {"error": "질문이 전달되지 않았습니다."}
+        logger.warning("❌ [유저 입력 없음] 질문(utterance)이 비어 있어 추천 처리를 중단합니다.")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "version": "2.0",
+                "template": {
+                    "outputs": [{"simpleText": {"text": "❌ 질문이 입력되지 않았습니다."}}]
+                }
+            }
+        )
 
     logger.info(f"📨 고객님의 질문을 접수했어요! 🔍 질문: '{query}', 카테고리: '{category}'")
-
-    if not callback_url:
-        response.status_code = 400
-        logger.warning("⚠️ 콜백 URL이 누락되었습니다. 서버 설정을 확인해주세요.")
-        return {"error": "Missing callbackUrl from Kakao"}
 
     background_tasks.add_task(
         process_and_callback,
@@ -43,15 +45,20 @@ async def get_recommended_products_with_callback(
         callback_url=callback_url
     )
 
-    response.status_code = status.HTTP_202_ACCEPTED
-    return {
-        "version": "2.0",
-        "useCallback": True,
-        "data": {
-            "text": "⏳ 추천 상품을 분석 중입니다. 잠시만 기다려주세요 😊"
-        }
-    }
+    logger.info("✅ [즉시 응답] 카카오 챗봇에 대기 메시지를 반환합니다.")
 
+    return JSONResponse(
+        status_code=200,
+        content={
+            "version": "2.0",
+            "useCallback": True,
+            "template": {
+                "outputs": [
+                    {"simpleText": {"text": "⏳ 추천 상품을 분석 중입니다. 잠시만 기다려주세요 😊"}}
+                ]
+            }
+        }
+    )
 
 @router.post("/kakao/recommended-products-direct")
 async def get_recommended_products_direct(data: KakaoRequest):

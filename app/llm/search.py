@@ -3,8 +3,7 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from app.utils.logger import logger
-from langchain_community.vectorstores.pgvector import PGVector
-from langchain_upstage import UpstageEmbeddings
+from app.llm.embedding import embed_query_locally
 
 def get_pg_connection():
     return psycopg2.connect(
@@ -17,12 +16,8 @@ def get_pg_connection():
     )
 
 def get_relevant_chunks_pgvector(query: str, category: str, top_k=5):
-    logger.info("🧠 쿼리 임베딩 생성 중...")
-    embedder = UpstageEmbeddings(
-        model="solar-embedding-1-large",
-        api_key=os.getenv("SOLAR_API_KEY")
-    )
-    query_vector = embedder.embed_query(query)
+    logger.info("🧠 로컬 임베딩 생성 중...")
+    query_vector = embed_query_locally(query)
 
     logger.info("📡 PostgreSQL 내 유사도 정렬 수행 중...")
     conn = get_pg_connection()
@@ -38,7 +33,7 @@ def get_relevant_chunks_pgvector(query: str, category: str, top_k=5):
         AND cmetadata->>'category' = %s
         ORDER BY embedding <=> %s::vector
         LIMIT %s
-    """, (query_vector, category, query_vector, top_k))
+    """, (query_vector.tolist(), category, query_vector.tolist(), top_k))
 
     rows = cur.fetchall()
     cur.close()
