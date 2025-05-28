@@ -3,7 +3,6 @@ from langchain_community.vectorstores.pgvector import PGVector
 from langchain_upstage import UpstageEmbeddings
 from sklearn.metrics.pairwise import cosine_similarity
 from app.utils.logger import logger
-from collections import defaultdict
 
 def get_vector_db():
     embedder = UpstageEmbeddings(
