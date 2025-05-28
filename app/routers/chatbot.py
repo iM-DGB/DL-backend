@@ -20,8 +20,13 @@ async def get_recommended_products_with_callback(
     response: Response
 ):
     callback_url = "https://chatbot-service-526438895194.asia-northeast3.run.app/kakao/callback"
-    query = data.userRequest.utterance
+    query = data.action.params.utterance or data.userRequest.utterance or ""
     category = data.action.params.category
+
+    if not query.strip():
+        response.status_code = 400
+        logger.warning("❌ 사용자 질문(utterance)이 비어있습니다.")
+        return {"error": "질문이 전달되지 않았습니다."}
 
     logger.info(f"📨 고객님의 질문을 접수했어요! 🔍 질문: '{query}', 카테고리: '{category}'")
 
@@ -49,8 +54,18 @@ async def get_recommended_products_with_callback(
 
 @router.post("/kakao/recommended-products-direct")
 async def get_recommended_products_direct(data: KakaoRequest):
-    query = data.userRequest.utterance
+    query = data.action.params.utterance or data.userRequest.utterance or ""
     category = data.action.params.category
+
+    if not query.strip():
+        return {
+            "version": "2.0",
+            "template": {
+                "outputs": [
+                    {"simpleText": {"text": "❌ 질문이 입력되지 않았습니다."}}
+                ]
+            }
+        }
 
     result = get_relevant_chunks(query=query, category=category, top_k=5, product_top_k=10)
     chunks = result["top_chunks"]
@@ -120,7 +135,11 @@ async def process_and_callback(user_msg: str, category: str, callback_url: str):
         logger.info("📬 콜백 URL로 전송 중...")
         async with httpx.AsyncClient() as client:
             resp = await client.post(callback_url, json=payload, timeout=10)
-            logger.info(f"📤 고객님께 추천 결과를 전달했어요! ✅ 응답 코드: {resp.status_code}, 본문: {resp.text}")
+
+        if resp.status_code != 200:
+            logger.warning(f"⚠️ 콜백 실패 - 상태코드: {resp.status_code}, 응답: {resp.text}")
+        else:
+            logger.info(f"📤 고객님께 추천 결과를 전달했어요! ✅ 응답 코드: {resp.status_code}")
 
     except Exception as e:
         logger.error(f"🚨 추천 결과 전달 중 문제가 발생했어요. 내용: {e}")
