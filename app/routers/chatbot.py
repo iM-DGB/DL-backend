@@ -100,18 +100,18 @@ async def kakao_callback(request: Request):
     data = await request.json()
     logger.info("✅ 챗봇에서 추천 답변을 잘 전달받았습니다!")
 
-    text = data.get("template", {}).get("outputs", [])[0].get("simpleText", {}).get("text", "죄송합니다. 답변을 받아오지 못했습니다.")
+    # 기존 simpleText에서 텍스트 추출
+    try:
+        text = data.get("template", {}).get("outputs", [])[0].get("simpleText", {}).get("text", "")
+    except Exception as e:
+        logger.error(f"❌ 콜백 응답 파싱 실패: {e}")
+        text = "추천 결과를 받아오지 못했습니다."
 
+    # webhook.answer 키로 통째로 전달
     return JSONResponse(content={
         "version": "2.0",
-        "template": {
-            "outputs": [
-                {
-                    "simpleText": {
-                        "text": text[:1000]
-                    }
-                }
-            ]
+        "data": {
+            "answer": text.strip()[:1000]  # 1000자 이내로 자르기
         }
     })
 
