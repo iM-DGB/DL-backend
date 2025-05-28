@@ -6,6 +6,7 @@ class UserRequest(BaseModel):
 class ActionParams(BaseModel):
     category: Optional[str] = None
     product_name: Optional[str] = None
+    utterance: Optional[str] = None
 class Action(BaseModel):
     params: ActionParams
 class KakaoRequest(BaseModel):
