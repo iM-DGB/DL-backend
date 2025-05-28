@@ -71,11 +71,6 @@ async def kakao_skill_endpoint(
     response: Response,
     request: Request
 ):
-    # Pydantic 모델 속성 접근으로 수정
-    user_msg = data.userRequest.utterance
-    category = data.action.params.category
-    product_name = data.action.params.product_name
-
 
     body = await request.json()
     callback_url = body.get("callbackUrl")
@@ -84,11 +79,13 @@ async def kakao_skill_endpoint(
         response.status_code = 400
         return {"error": "Missing callbackUrl from Kakao"}
 
+    user_msg = data.userRequest.utterance
+    category = data.action.params.category
+
     background_tasks.add_task(
         process_and_callback,
         user_msg,
         category,
-        product_name,
         callback_url
     )
 
@@ -101,13 +98,10 @@ async def kakao_skill_endpoint(
         }
     }
 
-async def process_and_callback(user_msg: str, category: str, product_name: str, callback_url: str):
+async def process_and_callback(user_msg: str, category: str, callback_url: str):
     # 🔍 데이터 검색
-    if product_name:
-        chunks = search_exact_product(category, product_name)
-    else:
-        result = get_relevant_chunks(user_msg, category, top_k=5, product_top_k=10)
-        chunks = result["top_chunks"]
+    result = get_relevant_chunks(user_msg, category, top_k=5, product_top_k=10)
+    chunks = result["top_chunks"]
 
     # 🧠 프롬프트 구성 & 응답 생성
     prompt = build_prompt(chunks, user_msg)
