@@ -84,7 +84,13 @@ async def kakao_skill_endpoint(
     # 백그라운드 작업 예약 (비동기 처리)
     background_tasks.add_task(process_and_callback, user_msg, category, product_name)
 
-    return {}  # 202 Accepted 이므로 빈 바디 반환
+    return {
+        "version": "2.0",
+        "useCallback": True,
+        "data": {
+            "text": "⏳ 답변을 생성하는 중이에요. 잠시만 기다려주세요 😊"
+        }
+    }
 
 async def process_and_callback(user_msg: str, category: str, product_name: str):
     # 1) 데이터 처리 (검색, LLM 호출 등)
