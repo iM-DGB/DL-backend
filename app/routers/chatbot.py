@@ -95,24 +95,32 @@ async def kakao_callback(request: Request):
 
 async def process_and_callback(user_msg: str, category: str, callback_url: str):
     try:
+        logger.info("🔍 유사 상품 검색 중...")
         result = get_relevant_chunks(user_msg, category, top_k=5, product_top_k=10)
         chunks = result["top_chunks"]
+        logger.info(f"🔎 검색된 청크 개수: {len(chunks)}")
 
+        logger.info("✍️ 프롬프트 생성 중...")
         prompt = build_prompt(chunks, user_msg)
+        logger.info(f"🧾 생성된 프롬프트 일부: {prompt[:100]}...")
+
+        logger.info("🧠 Gemini 응답 생성 중...")
         answer = generate_answer(prompt)
+        logger.info(f"📨 생성된 응답 일부: {answer[:100]}...")
 
         payload = {
             "version": "2.0",
             "template": {
                 "outputs": [
-                    {"simpleText": {"text": answer}}
+                    {"simpleText": {"text": answer[:1000]}}
                 ]
             }
         }
 
+        logger.info("📬 콜백 URL로 전송 중...")
         async with httpx.AsyncClient() as client:
             resp = await client.post(callback_url, json=payload, timeout=10)
-            logger.info(f"📤 고객님께 추천 결과를 성공적으로 전달드렸어요! (응답 코드: {resp.status_code})")
+            logger.info(f"📤 고객님께 추천 결과를 전달했어요! ✅ 응답 코드: {resp.status_code}, 본문: {resp.text}")
 
     except Exception as e:
         logger.error(f"🚨 추천 결과 전달 중 문제가 발생했어요. 내용: {e}")
