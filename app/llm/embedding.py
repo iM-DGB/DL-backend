@@ -10,7 +10,7 @@ api_key = os.getenv("SOLAR_API_KEY")
 # 🔹 모델 로딩 (최초 1회)
 solar_model = UpstageEmbeddings(
     model="solar-embedding-1-large",
-    api_key=os.getenv("SOLAR_API_KEY")
+    api_key=api_key
 )
 
 # 🔍 키워드 기반 태그 사전
@@ -54,8 +54,12 @@ SEARCH_HINTS = {
 }
 
 def embed_query_locally(text: str) -> np.ndarray:
+    # 🔎 사전 태그 삽입
     for keyword, tag in SEARCH_HINTS.items():
         if keyword in text:
             text = f"{tag} {text}"
             break
-    return solar_model.encode(text, normalize_embeddings=True)
+
+    # 🔄 임베딩 수행
+    vector = solar_model.embed_query(text)
+    return np.array(vector)
